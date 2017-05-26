@@ -3,10 +3,19 @@
 import requests
 import sys
 from lxml import html
+from urllib.parse import quote
+from functools import reduce
 
 
-def dockerfile(packages, base):
-    return
+def dockerfile(rel, pkgs):
+    return ['FROM debian:', rel, '\n',
+            'MAINTAINER Pierre Fenoll <pierrefenoll@gmail.com>\n',
+            '\n',
+            'RUN apt-get update \\\n',
+            '    && apt-get upgrade -y \\\n',
+            [''.join(['    && apt-get install -y ', pkg, ' \\\n']) for pkg in pkgs],
+            '    && apt-get clean\n'
+    ]
 
 def debian_release_order(rel):
     return {'sid': 0,
@@ -27,7 +36,7 @@ def best_first(matched):
 
 def find_package(dep):
     base_url = 'https://packages.debian.org/search?suite=default&section=all&arch=any&searchon=names&keywords='
-    rep = requests.get(base_url + dep)
+    rep = requests.get(base_url + quote(dep))
     if not (rep.ok and rep.status_code == 200):
         raise Exception('!found "' + dep + '": ' + str(r.status_code))
     else:
@@ -35,21 +44,42 @@ def find_package(dep):
         search_results = xml.xpath('//div[@id="psearchres"]')
         matching = {}
         if len(search_results) == 0:
-            raise Exception('!found "' + dep)
+            raise Exception('!found ' + dep)
         else:
             for li in search_results[0].xpath('//a[@class="resultlink"]'):
                 [_, rel, pkg] = li.get('href').split('/')
                 pkgs = matching.get(rel, [])
                 pkgs.append(pkg)
                 matching[rel] = pkgs
-        return best_first(matching)
+            for rel,pkgs in matching.items():
+                if pkg in pkgs:
+                    # on exact matches: remove other things
+                    matching[rel] = [pkg]
+        return matching
 
-# print(find_package('libboost1.55-all-dev'))
-# print(find_package('libboost1.55'))
-# print(find_package('libpurple'))
+def best_match(Pkgs):
+    rels_pkgs = list(map(find_package, Pkgs))
+    acc = {}
+    for rel_pkgs in rels_pkgs:
+        for rel,pkgs in rel_pkgs.items():
+            acc_pkgs = acc.get(rel, [])
+            acc_pkgs.extend(pkgs)
+            acc[rel] = acc_pkgs
+    r = {rel: pkgs for rel,pkgs in acc.items() if len(pkgs) == len(Pkgs)}
+    BestFirst = best_first(r)
+    if len(BestFirst) == 0:
+        raise Exception('!found ' + pkgs)
+    return BestFirst[0]
+
+# ./to_dockerfile g++-4.8 libopencv-dev libboost1.55-all-dev
 
 if len(sys.argv) < 2:
     print('Usage:  ', sys.argv[0], '<package name & maybe version>+')
     sys.exit(1)
+packages = sys.argv[1:]
 
-print(list(map(find_package, sys.argv[1:])))
+rel,pkgs = best_match(packages)
+print('Selected debian', rel, 'with packages', pkgs)
+with open('Dockerfile', 'w') as fd:
+    for item in dockerfile(rel, pkgs):
+        fd.write(''.join(item))
