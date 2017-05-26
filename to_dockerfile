@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+
+import re
+import requests
+import sys
+
+
+def dockerfile(packages, base):
+    return
+
+def find_package(dep):
+    rep = requests.get('https://www.google.com/search?q=site%3Apackages.debian.org+' + dep)
+    if not (rep.ok and rep.status_code == 200):
+        raise Exception('!found "' + dep + '": ' + str(r.status_code))
+    else:
+        txt = rep.text
+        r = re.findall('href\\s*=\\s*([\'"])([^\\2]+)[\\2]', txt)
+        return r
+
+print(find_package('libboost1.55-all-dev'))
