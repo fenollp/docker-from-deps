@@ -9,11 +9,11 @@ from functools import reduce
 
 def dockerfile(rel, pkgs):
     return ['FROM debian:', rel, '\n',
-            'MAINTAINER Pierre Fenoll <pierrefenoll@gmail.com>\n',
+            'MAINTAINER Pierre Fenoll <pierrefenoll+dockermade@gmail.com>\n',
             '\n',
             'RUN apt-get update \\\n',
             '    && apt-get upgrade -y \\\n',
-            [''.join(['    && apt-get install -y ', pkg, ' \\\n']) for pkg in pkgs],
+            '    && apt-get install -y ', ' '.join(pkgs), ' \\\n',
             '    && apt-get clean\n'
     ]
 
@@ -71,7 +71,6 @@ def best_match(Pkgs):
         raise Exception('!found ' + pkgs)
     return BestFirst[0]
 
-# ./to_dockerfile g++-4.8 libopencv-dev libboost1.55-all-dev
 
 if len(sys.argv) < 2:
     print('Usage:  ', sys.argv[0], '<package name & maybe version>+')
@@ -79,7 +78,7 @@ if len(sys.argv) < 2:
 packages = sys.argv[1:]
 
 rel,pkgs = best_match(packages)
-print('Selected debian', rel, 'with packages', pkgs)
+print('Selected debian', rel, 'with packages', ','.join(pkgs))
 with open('Dockerfile', 'w') as fd:
     for item in dockerfile(rel, pkgs):
         fd.write(''.join(item))
