@@ -35,6 +35,13 @@ def best_first(matched):
     return r
 
 def find_package(dep):
+    def log_matched(matched):
+        print(dep, file=sys.stderr)
+        for rel,pkgs in matching.items():
+            print('\t', rel, file=sys.stderr)
+            for pkg in pkgs:
+                print('\t\t', pkg, file=sys.stderr)
+
     base_url = 'https://packages.debian.org/search?suite=default&section=all&arch=any&searchon=names&keywords='
     rep = requests.get(base_url + quote(dep))
     if not (rep.ok and rep.status_code == 200):
@@ -51,10 +58,12 @@ def find_package(dep):
                 pkgs = matching.get(rel, [])
                 pkgs.append(pkg)
                 matching[rel] = pkgs
+            log_matched(matching)
             for rel,pkgs in matching.items():
-                if pkg in pkgs:
+                if dep in pkgs:
                     # on exact matches: remove other things
-                    matching[rel] = [pkg]
+                    matching[rel] = [dep]
+            log_matched(matching)
         return matching
 
 def best_match(Pkgs):
