@@ -1,5 +1,7 @@
 # docker-from-deps
 
+https://pkgs.alpinelinux.org/packages?name=gcc&branch=&repo=&arch=&maintainer=
+
 Generate a Dockerfile from a list of dependencies / package names & versions
 
 ## `to_dockerfile`
