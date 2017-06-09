@@ -34,7 +34,7 @@ def best_first(matched):
         r.append((rel, matched[rel]))
     return r
 
-def find_package(dep):
+def find_debian_package(dep):
     def log_matched(matched):
         print(dep, file=sys.stderr)
         for rel,pkgs in matching.items():
@@ -65,6 +65,26 @@ def find_package(dep):
                     matching[rel] = [dep]
             log_matched(matching)
         return matching
+
+def find_alpine_package(dep):
+    base_url = 'https://pkgs.alpinelinux.org/packages?branch=&repo=&arch=&maintainer=&name='
+    rep = requests.get(base_url + quote(dep))
+    if not (rep.ok and rep.status_code == 200):
+        raise Exception('!found "' + dep + '": ' + str(r.status_code))
+    else:
+        xml = html.fromstring(rep.text)
+        search_results = xml.xpath('//table/tr')
+        matching = {}
+        if len(search_results) == 0:
+            raise Exception('!found ' + dep)
+        else:
+            for tr in search_results:
+                [(t.get('class'), t.text) for t in tag.xpath('//td')]
+                tag.xpath('//td[@class="arch"]')
+
+
+def find_package(dep):
+    return find_alpine_package(dep) + find_debian_package(dep)
 
 def best_match(Pkgs):
     rels_pkgs = list(map(find_package, Pkgs))
